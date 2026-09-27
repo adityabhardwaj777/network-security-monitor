@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Network Security Monitor</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: #0a0a0f;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            min-height: 100vh;
+        }
+
+        header {
+            background: #0d1117;
+            border-bottom: 1px solid #1e3a5f;
+            padding: 20px 40px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        header h1 {
+            font-size: 1.3rem;
+            color: #58a6ff;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #3fb950;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: #0d1117;
+            border: 1px solid #1e3a5f;
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .stat-card .label {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .stat-card .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #58a6ff;
+        }
+
+        .stat-card.danger .value { color: #f85149; }
+        .stat-card.success .value { color: #3fb950; }
+
+        .panels {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .panel {
+            background: #0d1117;
+            border: 1px solid #1e3a5f;
+            border-radius: 8px;
+            padding: 24px;
+        }
+
+        .panel h2 {
+            font-size: 0.85rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1e3a5f;
+            padding-bottom: 12px;
+        }
+
+        .sim-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            text-align: left;
+        }
+
+        button:hover { opacity: 0.8; }
+
+        .btn-attack {
+            background: #2d1b1b;
+            color: #f85149;
+            border: 1px solid #3d2020;
+        }
+
+        .btn-success {
+            background: #1b2d1b;
+            color: #3fb950;
+            border: 1px solid #203d20;
+        }
+
+        .btn-reset {
+            background: #1b1b2d;
+            color: #58a6ff;
+            border: 1px solid #20203d;
+        }
+
+        .ip-input {
+            background: #0a0a0f;
+            border: 1px solid #1e3a5f;
+            border-radius: 6px;
+            color: #e0e0e0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            padding: 10px 14px;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .ip-input:focus {
+            outline: none;
+            border-color: #58a6ff;
+        }
+
+        .alerts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            background: #2d1b1b;
+            border: 1px solid #3d2020;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 0.8rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-item .alert-header {
+            color: #f85149;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .alert-item .alert-detail {
+            color: #8b949e;
+            line-height: 1.5;
+        }
+
+        .events-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background: #0a0a0f;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+
+        .event-item .event-ip { color: #58a6ff; }
+        .event-item .event-user { color: #8b949e; }
+
+        .badge {
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .badge-success { background: #1b2d1b; color: #3fb950; }
+        .badge-failed { background: #2d1b1b; color: #f85149; }
+        .badge-blocked { background: #2d1b2d; color: #bc8cff; }
+
+        .blocked-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .blocked-ip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background: #2d1b1b;
+            border: 1px solid #3d2020;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #f85149;
+        }
+
+        .empty-state {
+            color: #8b949e;
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="status-dot"></div>
+        <h1>⚡ Network Security Monitor</h1>
+    </header>
+
+    <div class="container">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">Total Connections</div>
+                <div class="value" id="total-events">0</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="label">Blocked IPs</div>
+                <div class="value" id="blocked-count">0</div>
+            </div>
+            <div class="stat-card success">
+                <div class="label">Alerts Triggered</div>
+                <div class="value" id="alert-count">0</div>
+            </div>
+        </div>
+
+        <div class="panels">
+            <div class="panel">
+                <h2>🎮 Simulate Connection</h2>
+                <div class="sim-buttons">
+                    <input class="ip-input" id="ip-input" type="text" placeholder="IP Address (e.g. 192.168.1.100)" value="192.168.1.100"/>
+                    <input class="ip-input" id="user-input" type="text" placeholder="Username" value="hacker"/>
+                    <button class="btn-attack" onclick="simulate(false)">⚠️ Simulate Failed Login Attempt</button>
+                    <button class="btn-success" onclick="simulate(true)">✅ Simulate Successful Login</button>
+                    <button class="btn-reset" onclick="resetMonitor()">🔄 Reset Monitor</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🚨 Security Alerts</h2>
+                <div class="alerts-list" id="alerts-list">
+                    <div class="empty-state">No alerts yet — try simulating failed logins</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panels">
+            <div class="panel">
+                <h2>📋 Recent Events</h2>
+                <div class="events-list" id="events-list">
+                    <div class="empty-state">No events yet</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🚫 Blocked IPs</h2>
+                <div class="blocked-list" id="blocked-list">
+                    <div class="empty-state">No blocked IPs</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let alertCount = 0;
+
+        async function simulate(success) {
+            const ip = document.getElementById('ip-input').value || '192.168.1.100';
+            const username = document.getElementById('user-input').value || 'user';
+
+            const res = await fetch('/connect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ip, username, success })
+            });
+
+            const data = await res.json();
+
+            if (res.status === 403) {
+                addAlert(data, ip, username);
+            }
+
+            await refreshStats();
+        }
+
+        async function refreshStats() {
+            const res = await fetch('/stats');
+            const data = await res.json();
+
+            document.getElementById('total-events').textContent = data.total_events;
+            document.getElementById('blocked-count').textContent = data.blocked_ips.length;
+
+            // Recent events
+            const eventsList = document.getElementById('events-list');
+            if (data.recent_events.length > 0) {
+                eventsList.innerHTML = [...data.recent_events].reverse().map(e => `
+                    <div class="event-item">
+                        <span class="event-ip">${e.ip}</span>
+                        <span class="event-user">${e.username}</span>
+                        <span class="badge ${e.success ? 'badge-success' : 'badge-failed'}">
+                            ${e.success ? 'SUCCESS' : 'FAILED'}
+                        </span>
+                    </div>
+                `).join('');
+            }
+
+            // Blocked IPs
+            const blockedList = document.getElementById('blocked-list');
+            if (data.blocked_ips.length > 0) {
+                blockedList.innerHTML = data.blocked_ips.map(ip => `
+                    <div class="blocked-ip">🚫 ${ip}</div>
+                `).join('');
+            } else {
+                blockedList.innerHTML = '<div class="empty-state">No blocked IPs</div>';
+            }
+        }
+
+        function addAlert(data, ip, username) {
+            alertCount++;
+            document.getElementById('alert-count').textContent = alertCount;
+
+            const list = document.getElementById('alerts-list');
+            const emptyState = list.querySelector('.empty-state');
+            if (emptyState) emptyState.remove();
+
+            const item = document.createElement('div');
+            item.className = 'alert-item';
+            item.innerHTML = `
+                <div class="alert-header">🚨 SECURITY ALERT — ${new Date().toLocaleTimeString()}</div>
+                <div class="alert-detail">
+                    IP: ${ip} | User: ${username}<br/>
+                    ${data.reason}
+                </div>
+            `;
+            list.prepend(item);
+        }
+
+        async function resetMonitor() {
+            await fetch('/reset', { method: 'POST' });
+            alertCount = 0;
+            document.getElementById('alert-count').textContent = 0;
+            document.getElementById('alerts-list').innerHTML = '<div class="empty-state">No alerts yet — try simulating failed logins</div>';
+            document.getElementById('events-list').innerHTML = '<div class="empty-state">No events yet</div>';
+            document.getElementById('blocked-list').innerHTML = '<div class="empty-state">No blocked IPs</div>';
+            await refreshStats();
+        }
+
+        // Auto refresh stats every 2 seconds
+        setInterval(refreshStats, 2000);
+        refreshStats();
+    </script>
+</body>
+</html>
